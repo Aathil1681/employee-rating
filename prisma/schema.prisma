@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  SUPERVISOR
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DEACTIVE
+}
+
+model User {
+  id                 String              @id @default(auto()) @map("_id") @db.ObjectId
+  firstName          String?
+  lastName           String?
+  email              String              @unique
+  password           String
+
+  // Organization membership (many-to-many) with role, permissions, and status
+  OrganizationMembers OrganizationMember[]
+
+  // Owned organizations (one-to-many)
+  OwnedOrganizations  Organization[]     @relation(name: "OrganizationOwner")
+
+  // for rating validation
+  ReceivedRatings     Rating[]           @relation("EmployeeRatings")   // Ratings this user received as employee
+  GivenRatings        Rating[]           @relation("SupervisorRatings") // Ratings this user gave as supervisor
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  DEACTIVE
+}
+
+model Organization {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  name                String               @unique
+  status              OrganizationStatus   @default(ACTIVE)
+
+  ownerId             String?              @db.ObjectId
+  Owner               User?                @relation(name: "OrganizationOwner", fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // Members (many-to-many) with role, permissions, and status
+  OrganizationMembers OrganizationMember[]
+
+  Criteria            Criteria[]
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+// Explicit relation table for User <-> Organization many-to-many relationship (membership)
+model OrganizationMember {
+  id             String                @id @default(auto()) @map("_id") @db.ObjectId
+  role           UserRole              @default(EMPLOYEE)  // Role specific to this organization
+  permissions    String[]                                 // Permissions specific to this organization
+  status         UserStatus            @default(ACTIVE)   // Status specific to this organization
+
+  userId         String                @db.ObjectId
+  User           User                  @relation(fields: [userId], references: [id])
+
+  organizationId String                @db.ObjectId
+  Organization   Organization          @relation(fields: [organizationId], references: [id])
+
+  // Supervisor relationship (one supervisor per organization membership)
+  supervisorId   String?               @db.ObjectId
+  Supervisor     OrganizationMember?   @relation("SupervisorEmployees", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Employees      OrganizationMember[]  @relation("SupervisorEmployees") // Employees supervised in this organization
+
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([userId, organizationId])
+  // Ensure supervisor is within the same organization (optional index for performance)
+  @@index([organizationId, supervisorId])
+}
+
+model Criteria {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  maxScore       Int
+
+  orgId          String         @db.ObjectId
+  Organization   Organization   @relation(fields: [orgId], references: [id])
+
+  CriteriaScore  CriteriaScore[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model CriteriaScore {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  score        Int
+
+  ratingId     String      @db.ObjectId
+  Rating       Rating      @relation(fields: [ratingId], references: [id])
+
+  criteriaId   String      @db.ObjectId
+  Criteria     Criteria    @relation(fields: [criteriaId], references: [id])
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([ratingId, criteriaId])
+}
+
+model Rating {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  periodStart      DateTime
+  periodEnd        DateTime
+  overallScore     Float
+  maxOverallScore  Int
+  feedback         String?
+
+  employeeId       String          @db.ObjectId
+  Employee         User            @relation("EmployeeRatings", fields: [employeeId], references: [id])
+
+  supervisorId     String          @db.ObjectId
+  Supervisor       User            @relation("SupervisorRatings", fields: [supervisorId], references: [id])
+
+  criteriaScores   CriteriaScore[]
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}

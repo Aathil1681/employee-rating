@@ -3,26 +3,49 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-diff:win": "@powershell -Command \"git diff -- . ':^node_modules' ':^package-lock.json' ':^src/app/fonts' ':^public' | Out-File -FilePath $env:USERPROFILE\\Desktop\\diff.txt; git ls-files --others --exclude-standard ':!node_modules/' ':!package-lock.json' ':!src/app/fonts/' ':!public/*' | ForEach-Object { Write-Output (\\\"+++ $_\\\"); Get-Content $_ } | Out-File -FilePath $env:USERPROFILE\\Desktop\\diff.txt -Append\""
+    "migrate": "npx prisma db push && npx prisma generate",
+    "create-diff:win": "@powershell -Command \"git diff --cached -- . ':^node_modules' ':^package-lock.json' ':^src/app/fonts' ':^public' | Out-File -FilePath $env:USERPROFILE\\Desktop\\diff.txt; git ls-files --others --exclude-standard ':!node_modules/*' ':!package-lock.json' ':!src/app/fonts/*' ':!public/*' | ForEach-Object { Write-Output ('+++ ' + $_); Get-Content $_ } | Out-File -FilePath $env:USERPROFILE\\Desktop\\diff2.txt -Append\"",
+    "create-diff:mac": "{ git diff -- . ':(exclude)node_modules' ':(exclude)package-lock.json' ':(exclude)src/app/fonts' ':(exclude)public' && git ls-files --others --exclude-standard ':!node_modules/*' ':!package-lock.json' ':!src/app/fonts/*' ':!public/*' | while read file; do echo \"+++ $file\"; cat \"$file\"; done; } > ~/Desktop/diff.txt"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
+    "@prisma/client": "^6.12.0",
+    "@react-email/components": "^0.0.41",
+    "@tanstack/react-query": "^5.71.1",
+    "argon2": "^0.43.0",
+    "axios": "^1.8.4",
+    "clsx": "^2.1.1",
+    "googleapis": "^149.0.0",
+    "js-cookie": "^3.0.5",
+    "jsonwebtoken": "^9.0.2",
+    "next": "15.2.4",
+    "nodemailer": "^7.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.1"
+    "react-hook-form": "^7.55.0",
+    "tailwind-merge": "^3.1.0",
+    "zod": "^3.24.2",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/argon2": "^0.15.4",
+    "@types/js-cookie": "^3.0.6",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "@eslint/eslintrc": "^3"
+    "eslint-config-next": "15.2.4",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "prisma": "^6.12.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
